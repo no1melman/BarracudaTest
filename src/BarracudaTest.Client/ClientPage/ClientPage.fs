@@ -10,8 +10,26 @@ open Bolero.Templating.Client
 
 type ClientPage = Template<"ClientPage/client.html">
 
+type Address =
+    {
+        line1: string
+        line2: string
+        town: string
+        postcode: string
+    }
+
+type Client =
+    {
+        name: string
+        dob: DateTimeOffset
+        address: Address
+    }
+
+type ClientPageModel = 
+    {
+        clients: Client list
+    }
+
 let clientPage =
     ClientPage()
-        .Who(b [] [text "Who"])
-        .Is(b [] [text "Is"])
         .Elt()

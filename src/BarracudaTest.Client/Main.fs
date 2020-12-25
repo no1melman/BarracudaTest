@@ -13,7 +13,7 @@ type Page =
     | [<EndPoint "/">] Home
     | [<EndPoint "/counter">] Counter
     | [<EndPoint "/data">] Data
-    | [<EndPoint "/clients">] Clients
+    | [<EndPoint "/clients">] Clients of PageModel<ClientPage.ClientPageModel>
 
 /// The Elmish application's model.
 type Model =
@@ -137,8 +137,12 @@ let update remote message model =
     | ClearError ->
         { model with error = None }, Cmd.none
 
+let defaultModel = function
+    | Home | Data | Counter -> ()
+    | Clients model -> Router.definePageModel model { clients = [] } 
+
 /// Connects the routing system to the Elmish application.
-let router = Router.infer SetPage (fun model -> model.page)
+let router = Router.inferWithModel SetPage (fun model -> model.page) defaultModel
 
 type Main = Template<"wwwroot/main.html">
 
@@ -199,7 +203,7 @@ let view model dispatch =
             menuItem model Home "Home"
             menuItem model Counter "Counter"
             menuItem model Data "Download data"
-            menuItem model Clients "Clients"
+            menuItem model (Clients Router.noModel) "Clients"
         ])
         .Body(
             cond model.page <| function
@@ -209,7 +213,7 @@ let view model dispatch =
                 cond model.signedInAs <| function
                 | Some username -> dataPage model username dispatch
                 | None -> signInPage model dispatch
-            | Clients -> ClientPage.clientPage
+            | Clients model -> ClientPage.clientPage
         )
         .Error(
             cond model.error <| function
