@@ -25,11 +25,36 @@ type Client =
         address: Address
     }
 
+
+type ClientService = 
+    {
+        getClients: unit -> Async<Client[]>
+    }
+    
+    interface IRemoteService with
+        member this.BasePath = "/clients"
+
+
 type ClientPageModel = 
     {
-        clients: Client list
+        clients: Client[] option
     }
 
-let clientPage =
+let defaultModel() = 
+    {
+        clients = None
+    }
+
+let clientPage (model: ClientPageModel) =
     ClientPage()
+        .Rows(cond model.clients <| function
+            | None -> ClientPage.EmptyRow().Elt()
+            | Some clients -> 
+                forEach clients <| fun client ->
+                    tr [] [
+                        td [] [text client.name]
+                        td [] [text (client.dob.ToString("yyyy-MM-dd"))]
+                        td [] [text client.address.line1]
+                        td [] [text ""]
+                    ])
         .Elt()

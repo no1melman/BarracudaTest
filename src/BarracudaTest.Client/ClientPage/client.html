@@ -6,9 +6,14 @@
         <th>Name</th>
         <th>Dob</th>
         <th>Address</th>
-        <th>...</th>
+        <th>.<br />.<br />.</th>
       </tr>
     </thead>
+    <tbody>
+      ${Rows}
+    </tbody>
   </table>
-
+  <template id="EmptyRow">
+    <tr><td colspan="4">Loading...</td></tr>
+  </template>
 </div>

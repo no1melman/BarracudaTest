@@ -4,6 +4,7 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ClientService.fs" />
     <Compile Include="BookService.fs" />
     <Compile Include="Startup.fs" />
   </ItemGroup>

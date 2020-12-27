@@ -24,6 +24,7 @@ type Startup() =
                 .AddCookie()
                 .Services
             .AddRemoting<BookService>()
+            .AddRemoting<ClientService>()
             .AddBoleroHost()
 #if DEBUG
             .AddHotReload(templateDir = __SOURCE_DIRECTORY__ + "/../BarracudaTest.Client")

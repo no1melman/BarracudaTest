@@ -21,6 +21,7 @@ type Model =
         page: Page
         counter: int
         books: Book[] option
+        client: ClientPage.ClientPageModel
         error: string option
         username: string
         password: string
@@ -41,6 +42,7 @@ let initModel =
         page = Home
         counter = 0
         books = None
+        client = ClientPage.defaultModel()
         error = None
         username = ""
         password = ""
@@ -73,6 +75,12 @@ type BookService =
     interface IRemoteService with
         member this.BasePath = "/books"
 
+type RemoteServices =
+    {
+        BookService: BookService
+        ClientService: ClientPage.ClientService
+    }
+
 /// The Elmish application's update messages.
 type Message =
     | SetPage of Page
@@ -91,10 +99,20 @@ type Message =
     | RecvSignOut
     | Error of exn
     | ClearError
+    | GetClients
+    | GotClients of ClientPage.Client[]
 
-let update remote message model =
+let updateClients (update: ClientPage.ClientPageModel -> ClientPage.ClientPageModel) (model: Model) : Model =
+    match model.page with
+    | Clients model' ->  
+        printfn "updated client" |> ignore
+        let innerModel = update model'.Model
+        { model with page = Clients { Model = innerModel }; client = innerModel  }
+    | _ -> model
+
+let update (remote: RemoteServices) message model =
     let onSignIn = function
-        | Some _ -> Cmd.ofMsg GetBooks
+        | Some _ -> Cmd.batch (seq { Cmd.ofMsg GetBooks; Cmd.ofMsg GetClients })
         | None -> Cmd.none
     match message with
     | SetPage page ->
@@ -108,7 +126,7 @@ let update remote message model =
         { model with counter = value }, Cmd.none
 
     | GetBooks ->
-        let cmd = Cmd.OfAsync.either remote.getBooks () GotBooks Error
+        let cmd = Cmd.OfAsync.either remote.BookService.getBooks () GotBooks Error
         { model with books = None }, cmd
     | GotBooks books ->
         { model with books = Some books }, Cmd.none
@@ -118,28 +136,34 @@ let update remote message model =
     | SetPassword s ->
         { model with password = s }, Cmd.none
     | GetSignedInAs ->
-        model, Cmd.OfAuthorized.either remote.getUsername () RecvSignedInAs Error
+        model, Cmd.OfAuthorized.either remote.BookService.getUsername () RecvSignedInAs Error
     | RecvSignedInAs username ->
         { model with signedInAs = username }, onSignIn username
     | SendSignIn ->
-        model, Cmd.OfAsync.either remote.signIn (model.username, model.password) RecvSignIn Error
+        model, Cmd.OfAsync.either remote.BookService.signIn (model.username, model.password) RecvSignIn Error
     | RecvSignIn username ->
         { model with signedInAs = username; signInFailed = Option.isNone username }, onSignIn username
     | SendSignOut ->
-        model, Cmd.OfAsync.either remote.signOut () (fun () -> RecvSignOut) Error
+        model, Cmd.OfAsync.either remote.BookService.signOut () (fun () -> RecvSignOut) Error
     | RecvSignOut ->
         { model with signedInAs = None; signInFailed = false }, Cmd.none
-
     | Error RemoteUnauthorizedException ->
         { model with error = Some "You have been logged out."; signedInAs = None }, Cmd.none
     | Error exn ->
         { model with error = Some exn.Message }, Cmd.none
     | ClearError ->
         { model with error = None }, Cmd.none
+    | GetClients ->
+        let cmd = Cmd.OfAsync.either remote.ClientService.getClients () GotClients Error
+        { model with books = None }, cmd
+    | GotClients clients ->
+        let model = model |> updateClients (fun client -> { client with clients = Some clients })
+        printfn "Client model :: %A" model |> ignore
+        model, Cmd.none
 
 let defaultModel = function
     | Home | Data | Counter -> ()
-    | Clients model -> Router.definePageModel model { clients = [] } 
+    | Clients model -> Router.definePageModel model { clients = None } 
 
 /// Connects the routing system to the Elmish application.
 let router = Router.inferWithModel SetPage (fun model -> model.page) defaultModel
@@ -192,7 +216,13 @@ let signInPage model dispatch =
 
 let menuItem (model: Model) (page: Page) (text: string) =
     Main.MenuItem()
-        .Active(if model.page = page then "is-active" else "")
+        .Active(
+            match model.page, page with
+            | Clients _, Clients _ -> "is-active"
+            | a, b when a = b -> "is-active"
+            | _ -> ""
+            // if model.page = page then "is-active" else ""
+            )
         .Url(router.Link page)
         .Text(text)
         .Elt()
@@ -213,7 +243,8 @@ let view model dispatch =
                 cond model.signedInAs <| function
                 | Some username -> dataPage model username dispatch
                 | None -> signInPage model dispatch
-            | Clients model -> ClientPage.clientPage
+            | Clients _ ->
+                ClientPage.clientPage model.client
         )
         .Error(
             cond model.error <| function
@@ -226,12 +257,14 @@ let view model dispatch =
         )
         .Elt()
 
+
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
     override this.Program =
         let bookService = this.Remote<BookService>()
-        let update = update bookService
+        let clientService = this.Remote<ClientPage.ClientService>()
+        let update = update ({ BookService = bookService; ClientService = clientService })
         Program.mkProgram (fun _ -> initModel, Cmd.ofMsg GetSignedInAs) update view
         |> Program.withRouter router
 #if DEBUG
