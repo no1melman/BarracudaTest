@@ -1,12 +1,54 @@
 <div>
-  
+  <div class="field">
+    <label class="label">Name</label>
+    <div class="control">
+      <input class="input" type="text" placeholder="Name..." bind="${Name}">
+    </div>
+  </div>
+  <div class="field">
+    <label class="label">Dob</label>
+    <div class="control">
+      <input class="input" type="date" placeholder="Date of Birth..." bind="${Dob}">
+    </div>
+  </div>
+  <div class="field">
+    <label class="label">Address</label>
+    <div class="control">
+      <input class="input" type="text" placeholder="Line 1..." bind="${Line1}">
+    </div>
+    <div class="control">
+      <input class="input" type="text" placeholder="Line 2..." bind="${Line2}">
+    </div>
+    <div class="control">
+      <input class="input" type="text" placeholder="Town/City..." bind="${Town}">
+    </div>
+    <div class="control">
+      <input class="input" type="text" placeholder="Postcode..." bind="${Postcode}">
+    </div>
+  </div>
+  <div class="field is-grouped">
+    <div class="control">
+      <button class="button is-link" onclick="${Submit}">Submit</button>
+    </div>
+    <div class="control">
+      <button class="button is-link is-light" onclick="${Cancel}">Cancel</button>
+    </div>
+  </div>
+
+
   <table class="table is-striped">
     <thead>
       <tr>
         <th>Name</th>
         <th>Dob</th>
         <th>Address</th>
-        <th>.<br />.<br />.</th>
+        <th>
+          <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" href="javascript:void(0)">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+          </a>
+        </th>
       </tr>
     </thead>
     <tbody>

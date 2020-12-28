@@ -7,35 +7,8 @@ open Bolero.Html
 open Bolero.Remoting
 open Bolero.Remoting.Client
 open Bolero.Templating.Client
-
-/// Routing endpoints definition.
-type Page =
-    | [<EndPoint "/">] Home
-    | [<EndPoint "/counter">] Counter
-    | [<EndPoint "/data">] Data
-    | [<EndPoint "/clients">] Clients of PageModel<ClientPage.ClientPageModel>
-
-/// The Elmish application's model.
-type Model =
-    {
-        page: Page
-        counter: int
-        books: Book[] option
-        client: ClientPage.ClientPageModel
-        error: string option
-        username: string
-        password: string
-        signedInAs: option<string>
-        signInFailed: bool
-    }
-
-and Book =
-    {
-        title: string
-        author: string
-        publishDate: DateTime
-        isbn: string
-    }
+open Structure
+open Messages
 
 let initModel =
     {
@@ -81,34 +54,21 @@ type RemoteServices =
         ClientService: ClientPage.ClientService
     }
 
-/// The Elmish application's update messages.
-type Message =
-    | SetPage of Page
-    | Increment
-    | Decrement
-    | SetCounter of int
-    | GetBooks
-    | GotBooks of Book[]
-    | SetUsername of string
-    | SetPassword of string
-    | GetSignedInAs
-    | RecvSignedInAs of option<string>
-    | SendSignIn
-    | RecvSignIn of option<string>
-    | SendSignOut
-    | RecvSignOut
-    | Error of exn
-    | ClearError
-    | GetClients
-    | GotClients of ClientPage.Client[]
-
-let updateClients (update: ClientPage.ClientPageModel -> ClientPage.ClientPageModel) (model: Model) : Model =
+let updateClients (update: ClientPageModel -> ClientPageModel) (model: Model) : Model =
     match model.page with
     | Clients model' ->  
         printfn "updated client" |> ignore
         let innerModel = update model'.Model
         { model with page = Clients { Model = innerModel }; client = innerModel  }
     | _ -> model
+
+let updateClient (update: Client -> Client) (clientPageModel: ClientPageModel) =
+    {
+        clientPageModel with client = update clientPageModel.client
+    }
+
+let noCmd model =
+    model, Cmd.none
 
 let update (remote: RemoteServices) message model =
     let onSignIn = function
@@ -158,12 +118,36 @@ let update (remote: RemoteServices) message model =
         { model with books = None }, cmd
     | GotClients clients ->
         let model = model |> updateClients (fun client -> { client with clients = Some clients })
-        printfn "Client model :: %A" model |> ignore
-        model, Cmd.none
+        noCmd model
+    | SetName name ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with name = name }) client)
+        noCmd model
+    | SetDob dob ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with dob = dob }) client)
+        noCmd model
+    | SetLine1 line1 ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with line1 = line1 }}) client)
+        noCmd model
+    | SetLine2 line2 ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with line2 = line2 }}) client)
+        noCmd model
+    | SetTown town ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with town = town }}) client)
+        noCmd model
+    | SetPostcode pc ->
+        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with postcode = pc }}) client)
+        noCmd model
+    | ClearClient ->
+        let model = model |>  updateClients (fun client -> updateClient (fun _ -> ClientPage.defaultModel().client) client)
+        noCmd model
+    | SaveClient client ->
+        let cmd = Cmd.OfAsync.either remote.ClientService.saveClient (client) (fun _ -> GetClients) Error
+        model, cmd
+        
 
 let defaultModel = function
     | Home | Data | Counter -> ()
-    | Clients model -> Router.definePageModel model { clients = None } 
+    | Clients model -> Router.definePageModel model (ClientPage.defaultModel())
 
 /// Connects the routing system to the Elmish application.
 let router = Router.inferWithModel SetPage (fun model -> model.page) defaultModel
@@ -177,7 +161,7 @@ let counterPage model dispatch =
     Main.Counter()
         .Decrement(fun _ -> dispatch Decrement)
         .Increment(fun _ -> dispatch Increment)
-        .Value(model.counter, fun v -> dispatch (SetCounter v))
+        .Value(model.counter, dispatch << SetCounter)
         .Elt()
 
 let dataPage model (username: string) dispatch =
@@ -244,7 +228,7 @@ let view model dispatch =
                 | Some username -> dataPage model username dispatch
                 | None -> signInPage model dispatch
             | Clients _ ->
-                ClientPage.clientPage model.client
+                ClientPage.clientPage model.client dispatch
         )
         .Error(
             cond model.error <| function

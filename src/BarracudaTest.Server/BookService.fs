@@ -15,7 +15,7 @@ type BookService(ctx: IRemoteContext, env: IWebHostEnvironment) =
 
     let books =
         let json = Path.Combine(env.ContentRootPath, "data/books.json") |> File.ReadAllText
-        JsonSerializer.Deserialize<Client.Main.Book[]>(json)
+        JsonSerializer.Deserialize<Client.Structure.Book[]>(json)
         |> ResizeArray
 
     override this.Handler =

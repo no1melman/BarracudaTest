@@ -4,6 +4,8 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Structure.fs" />
+    <Compile Include="Messages.fs" />
     <Compile Include="ClientPage/ClientPage.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Startup.fs" />
