@@ -2,6 +2,10 @@ module BarracudaTest.Client.Structure
 
 open System
 open Bolero
+open Elmish
+
+let noCmd model =
+    model, Cmd.none
 
 type Address =
     {

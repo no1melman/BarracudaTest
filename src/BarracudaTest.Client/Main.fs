@@ -23,6 +23,8 @@ let initModel =
         signInFailed = false
     }
 
+
+
 /// Remote service definition.
 type BookService =
     {
@@ -54,25 +56,10 @@ type RemoteServices =
         ClientService: ClientPage.ClientService
     }
 
-let updateClients (update: ClientPageModel -> ClientPageModel) (model: Model) : Model =
-    match model.page with
-    | Clients model' ->  
-        printfn "updated client" |> ignore
-        let innerModel = update model'.Model
-        { model with page = Clients { Model = innerModel }; client = innerModel  }
-    | _ -> model
-
-let updateClient (update: Client -> Client) (clientPageModel: ClientPageModel) =
-    {
-        clientPageModel with client = update clientPageModel.client
-    }
-
-let noCmd model =
-    model, Cmd.none
 
 let update (remote: RemoteServices) message model =
     let onSignIn = function
-        | Some _ -> Cmd.batch (seq { Cmd.ofMsg GetBooks; Cmd.ofMsg GetClients })
+        | Some _ -> Cmd.batch (seq { Cmd.ofMsg GetBooks; Cmd.ofMsg (ClientMessages GetClients) })
         | None -> Cmd.none
     match message with
     | SetPage page ->
@@ -113,37 +100,7 @@ let update (remote: RemoteServices) message model =
         { model with error = Some exn.Message }, Cmd.none
     | ClearError ->
         { model with error = None }, Cmd.none
-    | GetClients ->
-        let cmd = Cmd.OfAsync.either remote.ClientService.getClients () GotClients Error
-        { model with books = None }, cmd
-    | GotClients clients ->
-        let model = model |> updateClients (fun client -> { client with clients = Some clients })
-        noCmd model
-    | SetName name ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with name = name }) client)
-        noCmd model
-    | SetDob dob ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with dob = dob }) client)
-        noCmd model
-    | SetLine1 line1 ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with line1 = line1 }}) client)
-        noCmd model
-    | SetLine2 line2 ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with line2 = line2 }}) client)
-        noCmd model
-    | SetTown town ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with town = town }}) client)
-        noCmd model
-    | SetPostcode pc ->
-        let model = model |>  updateClients (fun client -> updateClient (fun client -> { client with address = { client.address with postcode = pc }}) client)
-        noCmd model
-    | ClearClient ->
-        let model = model |>  updateClients (fun client -> updateClient (fun _ -> ClientPage.defaultModel().client) client)
-        noCmd model
-    | SaveClient client ->
-        let cmd = Cmd.OfAsync.either remote.ClientService.saveClient (client) (fun _ -> GetClients) Error
-        model, cmd
-        
+    | ClientMessages clientMessage -> ClientPage.updateClientPage remote.ClientService clientMessage model
 
 let defaultModel = function
     | Home | Data | Counter -> ()

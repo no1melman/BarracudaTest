@@ -4,6 +4,18 @@ open System
 
 open Structure
 
+type ClientMessage = 
+    | GetClients
+    | GotClients of Client[]
+    | SetName of name: string
+    | SetDob of dob: DateTimeOffset
+    | SetLine1 of line1: string
+    | SetLine2 of line2: string
+    | SetTown of town: string
+    | SetPostcode of postcode: string
+    | SaveClient of Client
+    | ClearClient
+
 type Message =
     | SetPage of Page
     | Increment
@@ -21,13 +33,4 @@ type Message =
     | RecvSignOut
     | Error of exn
     | ClearError
-    | GetClients
-    | GotClients of Client[]
-    | SetName of name: string
-    | SetDob of dob: DateTimeOffset
-    | SetLine1 of line1: string
-    | SetLine2 of line2: string
-    | SetTown of town: string
-    | SetPostcode of postcode: string
-    | SaveClient of Client
-    | ClearClient
+    | ClientMessages of ClientMessage
